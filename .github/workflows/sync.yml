@@ -1,0 +1,32 @@
+name: Fetch IPTV List
+on:
+  schedule:
+    - cron: '0 8 * * *' # 每天北京时间 16:00 运行 (UTC 08:00)
+  workflow_dispatch: # 允许你手动触发
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 必须赋予写入权限，否则无法提交文件
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download index.m3u
+        run: |
+          # 抓取原始列表
+          curl -L https://iptv-org.github.io/iptv/index.m3u -o index.m3u
+
+      - name: Commit and push
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add index.m3u
+          # 检查是否有内容变动，避免空的 commit
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes, skipping commit."
+          else
+            git commit -m "Auto-update index.m3u $(date +'%Y-%m-%d')"
+            git push
+          fi
